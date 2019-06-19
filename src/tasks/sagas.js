@@ -1,13 +1,13 @@
 import { LOCATION_CHANGE } from 'react-router-redux';
 import { eventChannel } from 'redux-saga';
 import { call, cancel, fork, put, take } from 'redux-saga/effects';
-import { authActions } from 'src/auth';
+// import { authActions } from 'src/auth';
 import { taskActions } from './actions';
 import { taskList } from './task-list';
 
 
 function subscribe() {
-  return eventChannel(emit => taskList.subscribe(emit));
+    return eventChannel(emit => taskList.subscribe(emit));
 }
 
 function* read() {
@@ -19,12 +19,16 @@ function* read() {
 }
 
 function* write(context, method, onError, ...params) {
-  try {
-    yield call([context, method], ...params);
-  }
-  catch (error) {
-    yield put(onError(error));
-  }
+    console.log('*write method', method)
+    console.log('*write onError', onError)
+    console.log('*write params', params )
+
+    try {
+        yield call([context, method], ...params);
+    }
+    catch (error) {
+        yield put(onError(error));
+    }
 }
 
 const createTask = write.bind(null, taskList, taskList.push, taskActions.createTaskFailed);
@@ -36,48 +40,49 @@ const updateTask = write.bind(null, taskList, taskList.update, taskActions.updat
 //  WATCHERS
 //-------------------------------------
 
-function* watchAuthentication() {
-  while (true) {
-    let { payload } = yield take(authActions.SIGN_IN_FULFILLED);
+// function* watchAuthentication() {
+//   while (true) {
+//     let { payload } = yield take(authActions.SIGN_IN_FULFILLED);
 
-    taskList.path = `tasks/${payload.authUser.uid}`;
-    const job = yield fork(read);
+//     taskList.path = `tasks/${payload.authUser.uid}`;
+//     const job = yield fork(read);
 
-    yield take([authActions.SIGN_OUT_FULFILLED]);
-    yield cancel(job);
-  }
-}
+//     yield take([authActions.SIGN_OUT_FULFILLED]);
+//     yield cancel(job);
+//   }
+// }
 
 function* watchCreateTask() {
-  while (true) {
-    let { payload } = yield take(taskActions.CREATE_TASK);
-    yield fork(createTask, payload.task);
-  }
+    while (true) {
+        let { payload } = yield take(taskActions.CREATE_TASK);
+        console.log('watchCreateTask payload', payload)
+        yield fork(createTask, payload.task);
+    }
 }
 
 function* watchLocationChange() {
-  while (true) {
-    let { payload } = yield take(LOCATION_CHANGE);
-    if (payload.pathname === '/') {
-      const params = new URLSearchParams(payload.search);
-      const filter = params.get('filter');
-      yield put(taskActions.filterTasks(filter));
+    while (true) {
+        let { payload } = yield take(LOCATION_CHANGE);
+        if (payload.pathname === '/') {
+            const params = new URLSearchParams(payload.search);
+            const filter = params.get('filter');
+            yield put(taskActions.filterTasks(filter));
+        }
     }
-  }
 }
 
 function* watchRemoveTask() {
-  while (true) {
-    let { payload } = yield take(taskActions.REMOVE_TASK);
-    yield fork(removeTask, payload.task.key);
-  }
+    while (true) {
+        let { payload } = yield take(taskActions.REMOVE_TASK);
+        yield fork(removeTask, payload.task.key);
+    }
 }
 
 function* watchUpdateTask() {
-  while (true) {
-    let { payload } = yield take(taskActions.UPDATE_TASK);
-    yield fork(updateTask, payload.task.key, payload.changes);
-  }
+    while (true) {
+        let { payload } = yield take(taskActions.UPDATE_TASK);
+        yield fork(updateTask, payload.task.key, payload.changes);
+    }
 }
 
 
@@ -86,9 +91,9 @@ function* watchUpdateTask() {
 //-------------------------------------
 
 export const taskSagas = [
-  fork(watchAuthentication),
-  fork(watchCreateTask),
-  fork(watchLocationChange),
-  fork(watchRemoveTask),
-  fork(watchUpdateTask)
+    //   fork(watchAuthentication),
+    fork(watchCreateTask),
+    fork(watchLocationChange),
+    fork(watchRemoveTask),
+    fork(watchUpdateTask)
 ];
